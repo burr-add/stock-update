@@ -31,20 +31,21 @@ $rows = foreach ($sym in $symbols.Keys) {
     $q = $resp.$sym
     if(-not $q -or $q.status -eq 'error') {
         [PSCustomObject]@{
-            Symbol = $sym; Name = $symbols[$sym]; Open = $null; Close = $null
+            Symbol = $sym; Name = $symbols[$sym]; PrevClose = $null; Close = $null
             Change = $null; PctChange = $null; AsOf = "Error: $($q.message)" 
         }
         continue 
     }
     $open = [double]$q.open
     $close = [double]$q.close
+    $prevClose = [double]$q.previous_close
     [PSCustomObject]@{
         Symbol = $sym
         Name = $symbols[$sym]
-        Open = $open
+        PrevClose = $prevClose
         Close = $close
-        Change = $close - $open
-        PctChange = if ($open -ne 0) {(($close - $open) / $open) * 100} else {$null}
+        Change = $close - $prevClose
+        PctChange = if ($prevClose -ne 0) {(($close - $prevClose) / $prevClose) * 100} else {$null}
         AsOf = [string]$q.datetime
     }
 }
@@ -102,7 +103,7 @@ $grid.DefaultCellStyle.ForeColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
 # --- Colulmns added manually, no data binding needed
 [void]$grid.Columns.Add('Symbol', 'Symbol')
 [void]$grid.Columns.Add('Company', 'Company')
-[void]$grid.Columns.Add('Open', 'Open')
+[void]$grid.Columns.Add('PrevClose', 'PrevClose')
 [void]$grid.Columns.Add('Close', 'Close')
 [void]$grid.Columns.Add('$ Change', '$ Change')
 [void]$grid.Columns.Add('% Change', '% Change')
@@ -128,7 +129,7 @@ foreach ($r in $rows) {
     $idx = $grid.Rows.Add(
         $r.Symbol,
         $r.Name,
-        (Format-Money $r.Open),
+        (Format-Money $r.PrevClose),
         (Format-Money $r.Close),
         (Format-Money $r.Change),
         (Format-Pct $r.PctChange),
